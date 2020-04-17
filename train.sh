@@ -1,7 +1,7 @@
 cd nerd
-python train.py --gpu='1'\
---seed=888 --batch_size=32\
---lr=0.001 --lrr=0.1 --lr_decay=0.1\
---b1=0.9 --b2=0.98\
---epochs=10 --decay_epoch=7 | tee ../log.txt
+python train.py --gpu='1,0' \
+ --seed=888 --batch_size=$bs \
+ --lr=$lr --lrr=$(echo "$lrr * 0.1"|bc) --lr_decay=$ld \
+ --b1=0.9 --b2=$b \
+ --epochs=5 --decay_epoch=3
 cd ..

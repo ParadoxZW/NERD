@@ -12,7 +12,7 @@ class NerdEncoder(nn.Module):
         self.bert = BertModel.from_pretrained("hfl/chinese-bert-wwm-ext")
     
     def init(self):
-        self.bert = BertModel.from_pretrained("hfl/chinese-bert-wwm-ext")
+        self.bert = BertModel.from_pretrained("hfl/chinese-roberta-wwm-ext")
 
     def forward(self, sent, sent_mask, token_type=None):
         if token_type is None:

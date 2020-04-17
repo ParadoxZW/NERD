@@ -26,6 +26,7 @@ def train_data_prepare(json_data, name_to_com, tokenizer, max_length):
     raw_data = []
     for item in json_data:
         sent = item["text"]
+        text_id = item["text_id"]
         # because every sample in traindata is annotated only one mention 
         lab_result = item["lab_result"][0]
         mention = lab_result['mention']

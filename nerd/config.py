@@ -21,7 +21,7 @@ parser.add_argument('-b', '--batch_size', default=64, type=int,
                     metavar='N', help='mini-batch size (default: 64)')
 parser.add_argument('--lr', '--learning_rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate')
-parser.add_argument('--lrr',, default=0.1, type=float,
+parser.add_argument('--lrr', default=0.1, type=float,
                     metavar='LRR', help='rate of learning rate, for bert')
 parser.add_argument('--lr_decay', default=0.1, type=float,
                     metavar='LRD', help='learning rate decay')
@@ -33,5 +33,7 @@ parser.add_argument('--epochs', default=10, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--decay_epoch', default=7, type=int, metavar='N',
                     help='epochs to decay')
+parser.add_argument('--threshold', default=0.5, type=float,
+                    metavar='T', help='initial learning rate')
 args = parser.parse_args()
 print('args:\n' + args.__str__())

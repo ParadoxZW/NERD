@@ -12,12 +12,12 @@ def param_split(named_params, lr, lrr):
     p2 = {"params": p2, "lr": lr * lrr, "lr_base": lr * lrr}
     return [p1, p2]
 
-def get_optim(args):
+def get_optim(args, model):
     params = param_split(model.named_parameters(), args.lr, args.lrr)
 
-    optim = optim.Adam(params, beta1=args.b1, beta2=args.b2)
+    optimization = optim.Adam(params, betas=(args.b1, args.b2))
 
-    return optim
+    return optimization
 
 
 def adjust_lr(optim, decay_r):

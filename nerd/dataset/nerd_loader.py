@@ -7,7 +7,7 @@ import datetime
 import json
 
 from utils.desolve import eval_file
-from data_prepare import train_data_prepare
+from .data_prepare import train_data_prepare
 
 TOKENIZER = BertTokenizer.from_pretrained("hfl/chinese-bert-wwm-ext")
 
@@ -54,10 +54,12 @@ class BaseData(Dataset):
             open(filename, 'w', encoding='utf8'), 
             ensure_ascii=False, 
             indent=True)
+        self.result_json['submit_result'] = []
 
     def evaluate(self, epoch):
         ''' only used for dev dataset '''
         filename = self.result_dir + '/' + str(epoch) + '.json'
+        print('evaluate '+filename)
         re_file = eval_file(filename)
         gt_set = eval_file(self.gt_file_name)
         re_set = re_file["submit_result"]
@@ -78,9 +80,9 @@ class BaseData(Dataset):
                         # del
                         flag = False
                         match_cnt += 1
-            if flag:
-                print(re)
-                print(gt)
+            #if flag:
+            #    print(re)
+            #    print(gt)
         R = match_cnt / M
         P = match_cnt / M_
         F1 = 2 * P * R / (P + R)
