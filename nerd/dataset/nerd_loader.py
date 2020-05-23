@@ -5,11 +5,12 @@ from transformers import BertTokenizer
 import math
 import datetime
 import json
+import pickle
 
-from utils.desolve import eval_file
-from .data_prepare import train_data_prepare
+from utils.desolve import eval_file, desolve_str_to_list
+from .data_prepare import train_data_prepare, test_data_prepare
 
-TOKENIZER = BertTokenizer.from_pretrained("hfl/chinese-bert-wwm-ext")
+TOKENIZER = BertTokenizer.from_pretrained("hfl/chinese-roberta-wwm-ext")
 
 class BaseData(Dataset):
     def __init__ (self):
@@ -22,8 +23,12 @@ class BaseData(Dataset):
         self.result_dir = None
         self.result_file_name = None
         self.gt_file_name = None  # filename of ground truth file
+        self.is_test = False
 
     def get_batch_result(self, batch_input, batch_output):
+        if self.is_test:
+            preds = np.asarray(batch_output.cpu()).reshape(1, -1)
+            self.pred_list.append(preds)
         for index, pred in zip(batch_input['index'], batch_output):
             result_item = {}
             text_id, text, mention, offset, kb_id = self.raw_data[index]
@@ -33,21 +38,16 @@ class BaseData(Dataset):
             mention_item = {}
             mention_item["mention"] = mention
             mention_item["offset"] = offset
-            pred = pred.item()
+            pred = torch.sigmoid(pred).item()
             mention_item["kb_id"] = kb_id if pred >= self.threshold else -1
             mention_item["confidence"] = max(pred, 1 - pred)
             result_item["mention_result"].append(mention_item)
             self.result_json["submit_result"].append(result_item)
 
-    def result_post_proc(self):
-        pass
-
     def write_json(self, epoch):
-        if self.need_post:
-            self.result_post_proc()
+        # if self.need_post:
+        #     self.result_post_proc()
         # if self.result_file_name is None:
-        # curr_time = datetime.datetime.now()
-        # self.result_file_name = self.result_dir + '/' +  curr_time.strftime("%m-%d") + '.json'
         filename = self.result_dir + '/' + str(epoch) + '.json'
         json.dump(
             self.result_json,
@@ -55,6 +55,14 @@ class BaseData(Dataset):
             ensure_ascii=False, 
             indent=True)
         self.result_json['submit_result'] = []
+        if self.is_test:
+            preds = np.hstack(self.pred_list).reshape(len(self.raw_data))
+            curr_time = datetime.datetime.now()
+            ens_file_name = '../results/ensemble/' + self.version + '.pkl'
+            result_pred = [
+                {'question': self.raw_data[ix], 'confidence': preds[ix]} for ix in range(len(self.raw_data))
+            ]
+            pickle.dump(result_pred, open(ens_file_name, 'wb+'), protocol=-1)
 
     def evaluate(self, epoch):
         ''' only used for dev dataset '''
@@ -80,12 +88,13 @@ class BaseData(Dataset):
                         # del
                         flag = False
                         match_cnt += 1
-            #if flag:
-            #    print(re)
-            #    print(gt)
-        R = match_cnt / M
-        P = match_cnt / M_
-        F1 = 2 * P * R / (P + R)
+            # if flag and epoch == 4:
+                # print(re)
+                # print(gt)
+                # print()
+        R = match_cnt / M 
+        P = match_cnt / M_ 
+        F1 = 2 * P * R / (P + R) 
         return R, P, F1
 
 
@@ -130,36 +139,42 @@ class AnnoData(BaseData):
 
 class TestData(BaseData):
     '''
-    for inference and test
+    to load train dataset or dev dataset
     '''
-    def __init__(self, file_dir, name_to_com, id_to_com, max_length=160):
+    def __init__(self, file_dir, name_to_com, id_to_com, max_length=160, threshold=0.5, result_dir=None, version=None):
         super().__init__()
-        # self.gt_file_name = file_dir
-        # self.max_length = max_length
-        # self.name_to_com = name_to_com
-        # self.id_to_com = id_to_com
-        # json_data = eval_file(file_dir)
-        # self.raw_data, self.data = train_data_prepare(json_data, name_to_com, TOKENIZER, max_length)
-        # self._len = self.data['ids'].shape[0]
-        # self.ids = torch.tensor(self.data['ids'], dtype=torch.long)
-        # self.mask_mat = torch.tensor(self.data['mask_mat'], dtype=torch.long)
-        # self.ent_mask = torch.tensor(self.data['ent_mask'], dtype=torch.long)
-        # self.kb_ids = torch.tensor(self.data['kb_ids'], dtype=torch.long)
-        # self.labels = torch.tensor(self.data['labels'], dtype=torch.uint8)
-        # self.offsets = torch.tensor(self.data['offsets'], dtype=torch.long)
+        self.is_test = True
+        self.version = version
+        self.pred_list = []
+        self.test_file_name = file_dir
+        self.max_length = max_length
+        self.name_to_com = name_to_com
+        self.id_to_com = id_to_com
+        self.threshold = threshold
+        self.result_dir = result_dir
+        querys = desolve_str_to_list(file_dir)
+        self.raw_data, self.data = test_data_prepare(querys, id_to_com, TOKENIZER, max_length)
+        self._len = self.data['ids'].shape[0]
+        print('data size:', self._len)
+        self.ids = torch.tensor(self.data['ids'], dtype=torch.long)
+        self.mask_mat = torch.tensor(self.data['mask_mat'], dtype=torch.long)
+        self.ent_mask = torch.tensor(self.data['ent_mask'], dtype=torch.long)
+        self.kb_ids = torch.tensor(self.data['kb_ids'], dtype=torch.long)
+        self.labels = torch.tensor(self.data['labels'], dtype=torch.uint8)
+        self.offsets = torch.tensor(self.data['offsets'], dtype=torch.long)
     
     def __len__(self):
         return self._len
     
     def __getitem__(self, index):
         # offset = np.argwhere(self.ent_mask[index]==1)[0]
-        # sample = {
-        #     'index': index,
-        #     'ids': self.ids[index],
-        #     'mask_mat': self.mask_mat[index],
-        #     'ent_mask': self.ent_mask[index],
-        #     'kb_ids': self.kb_ids[index],
-        #     'offset': self.offsets[index],
-        #     'labels': self.labels[index]
-        # }
+        sample = {
+            'index': index,
+            'ids': self.ids[index],
+            'mask_mat': self.mask_mat[index],
+            'ent_mask': self.ent_mask[index],
+            'kb_ids': self.kb_ids[index],
+            'offset': self.offsets[index],
+            'labels': self.labels[index]
+        }
         return sample

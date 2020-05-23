@@ -9,7 +9,7 @@ from transformers import BertModel
 class NerdEncoder(nn.Module):
     def __init__(self):
         super().__init__()
-        self.bert = BertModel.from_pretrained("hfl/chinese-bert-wwm-ext")
+        self.bert = BertModel.from_pretrained("hfl/chinese-roberta-wwm-ext")
     
     def init(self):
         self.bert = BertModel.from_pretrained("hfl/chinese-roberta-wwm-ext")

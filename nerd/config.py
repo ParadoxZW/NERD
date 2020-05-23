@@ -15,6 +15,10 @@ parser = argparse.ArgumentParser(
     description='nerd training args')
 parser.add_argument('--gpu', type=str, required=True,
                     metavar='G', help='gpu')
+parser.add_argument('--ckpt_path', type=str, default='',
+                    metavar='C', help='test ckpt')
+parser.add_argument('--version', type=str, default='',
+                    metavar='V', help='version name')
 parser.add_argument('--seed', default=-1, type=int,
                     metavar='S', help='random seed(default: 888)')
 parser.add_argument('-b', '--batch_size', default=64, type=int,

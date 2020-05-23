@@ -40,3 +40,21 @@ def evaluate(model, dataset, dev_loader, epoch):
         R, P, F1 = dataset.evaluate(epoch)
         print('R: %f, P: %f, F1, %f \n' % (R, P, F1))
         return F1
+
+def test(model, dataset, loader):
+    with torch.no_grad():
+        model.eval()
+        pbar = tqdm(enumerate(loader), total=len(loader))
+        for i, sample in pbar:
+            sent = sample['ids'].cuda()
+            sent_mask = sample['mask_mat'].cuda()
+            ent_mask = sample['ent_mask'].float().cuda()
+            entity_id = sample['kb_ids'].cuda()
+            label = sample['labels'].cuda().view(-1, 1)
+            offset = sample['offset'].cuda()
+            pred = model(sent, sent_mask, entity_id, offset, ent_mask)
+            dataset.get_batch_result(sample, pred)
+            # ta = ((pred>0.5) == label).sum().item()
+            # pbar.set_description('acc %f' % (ta / label.shape[0]))
+        dataset.write_json(-1)
+        print('result saved')

@@ -105,8 +105,8 @@ class SimiFuse(nn.Module):
             -1, 
             self.config.hidden_size
         )
-        x = tar_b * feats
-        x = self.fc(x) + self.act(self.linear(feats))
+        x = tar_b + feats
+        x = self.fc(x) # + self.act(self.linear(feats))
         return x
  
 
