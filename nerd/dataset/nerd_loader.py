@@ -44,10 +44,33 @@ class BaseData(Dataset):
             result_item["mention_result"].append(mention_item)
             self.result_json["submit_result"].append(result_item)
 
+    def result_post_proc(self):
+        # only use for inference
+        # merge multi-mention for same text sample
+        # `results/runtime/infer.json` is just a intermediate result file.
+        filename = self.result_dir + '/infer.json'
+        with open(filename, 'r', encoding='utf8') as js_file:
+            js = json.load(js_file)
+            res = js['submit_result']
+            new_js = {"team_name": "ddl自动机",}
+            news = []
+            pn = None
+            i = None
+            for item in res:
+                if item['text_id'] == i:
+                    pn['mention_result'] += item['mention_result']
+                else:
+                    i = item['text_id']
+                    pn = deepcopy(item)
+                    news.append(pn)
+            new_js['submit_result'] = news
+            return new_js # merged json result file
+
+
     def write_json(self, epoch):
-        # if self.need_post:
-        #     self.result_post_proc()
-        # if self.result_file_name is None:
+        # save json file in local
+        # the file is just a intermediate file,
+        # which needs post-process
         filename = self.result_dir + '/' + str(epoch) + '.json'
         json.dump(
             self.result_json,
@@ -139,7 +162,7 @@ class AnnoData(BaseData):
 
 class TestData(BaseData):
     '''
-    to load train dataset or dev dataset
+    to load test data
     '''
     def __init__(self, file_dir, name_to_com, id_to_com, max_length=160, threshold=0.5, result_dir=None, version=None):
         super().__init__()
@@ -153,6 +176,45 @@ class TestData(BaseData):
         self.threshold = threshold
         self.result_dir = result_dir
         querys = desolve_str_to_list(file_dir)
+        self.raw_data, self.data = test_data_prepare(querys, id_to_com, TOKENIZER, max_length)
+        self._len = self.data['ids'].shape[0]
+        print('data size:', self._len)
+        self.ids = torch.tensor(self.data['ids'], dtype=torch.long)
+        self.mask_mat = torch.tensor(self.data['mask_mat'], dtype=torch.long)
+        self.ent_mask = torch.tensor(self.data['ent_mask'], dtype=torch.long)
+        self.kb_ids = torch.tensor(self.data['kb_ids'], dtype=torch.long)
+        self.labels = torch.tensor(self.data['labels'], dtype=torch.uint8)
+        self.offsets = torch.tensor(self.data['offsets'], dtype=torch.long)
+    
+    def __len__(self):
+        return self._len
+    
+    def __getitem__(self, index):
+        # offset = np.argwhere(self.ent_mask[index]==1)[0]
+        sample = {
+            'index': index,
+            'ids': self.ids[index],
+            'mask_mat': self.mask_mat[index],
+            'ent_mask': self.ent_mask[index],
+            'kb_ids': self.kb_ids[index],
+            'offset': self.offsets[index],
+            'labels': self.labels[index]
+        }
+        return sample
+
+
+class InferData(BaseData):
+    '''
+    when deploy, preocess the inference request.
+    '''
+    def __init__(self, querys, name_to_com, id_to_com, max_length=160, threshold=0.5, result_dir=None):
+        super().__init__()
+        self.pred_list = []
+        self.max_length = max_length
+        self.name_to_com = name_to_com
+        self.id_to_com = id_to_com
+        self.threshold = threshold
+        self.result_dir = result_dir
         self.raw_data, self.data = test_data_prepare(querys, id_to_com, TOKENIZER, max_length)
         self._len = self.data['ids'].shape[0]
         print('data size:', self._len)

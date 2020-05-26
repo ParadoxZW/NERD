@@ -5,6 +5,15 @@ A Pytorch implementation of NERD for training, testing and inference.
 ![avatar](imgs/nerd.png "NERD")
 The offsets of entities are obtained by string match due to the simplicity of the given entity sets.
 
+## Quick Start
+I provide several bash scripts for different purpose and application scenarios. Just simply run:
+```Bash
+bash train.sh  # train a model
+bash test.sh   # process test.txt and get a result json
+bash deploy.sh # start algorithm server
+```
+You are free to modify the configs or parameters in these scripts for your customized experiments and applications.
+
 ## Log
 run `bash train.sh | tee log.txt`
 ```
